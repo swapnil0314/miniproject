@@ -9,22 +9,98 @@ const ViewVehicles = () => {
   const variant = location.state;
 
   const [vehicles, setVehicles] = useState([]);
-
-  const admin_jwtToken = sessionStorage.getItem("admin-jwtToken");
-
-  let navigate = useNavigate();
-
+  const [variantRequest, setVariantRequest] = useState({
+    modelNumber: "",
+  });
   const [vehicleRequest, setVehicleRequest] = useState({
     variantId: variant.id,
     registrationNumber: "",
   });
+  const [errors, setErrors] = useState({ registrationNumberError: "" });
 
-  const handleUserInput = (e) => {
-    setVehicleRequest({
-      ...vehicleRequest,
-      [e.target.name]: e.target.value,
-    });
+  const admin_jwtToken = sessionStorage.getItem("admin-jwtToken");
+  let navigate = useNavigate();
+
+  const handleRegistrationInput = (e) => {
+    let value = e.target.value.toUpperCase(); // Convert to uppercase
+    let formattedValue = value.replace(/\s/g, ''); // Remove all spaces
+  
+    let finalValue = '';
+    let valid = true;
+  
+    for (let i = 0; i < formattedValue.length; i++) {
+      if (i < 2) {
+        // First two characters must be letters
+        if (/[A-Z]/.test(formattedValue[i])) {
+          finalValue += formattedValue[i];
+        } else {
+          valid = false;
+          break;
+        }
+      } else if (i >= 2 && i < 4) {
+        // Next two characters must be digits
+        if (/\d/.test(formattedValue[i])) {
+          finalValue += formattedValue[i];
+        } else {
+          valid = false;
+          break;
+        }
+      } else if (i >= 4 && i < 6) {
+        // Next two characters must be letters
+        if (/[A-Z]/.test(formattedValue[i])) {
+          finalValue += formattedValue[i];
+        } else {
+          valid = false;
+          break;
+        }
+      } else if (i >= 6 && i < 10) {
+        // Last four characters must be digits
+        if (/\d/.test(formattedValue[i])) {
+          finalValue += formattedValue[i];
+        } else {
+          valid = false;
+          break;
+        }
+      }
+    }
+  
+    if (valid) {
+      // Insert spaces at the appropriate positions
+      if (finalValue.length > 2) finalValue = finalValue.slice(0, 2) + ' ' + finalValue.slice(2);
+      if (finalValue.length > 5) finalValue = finalValue.slice(0, 5) + ' ' + finalValue.slice(5);
+      if (finalValue.length > 8) finalValue = finalValue.slice(0, 8) + ' ' + finalValue.slice(8);
+  
+      // Restrict to a maximum of 14 characters
+      finalValue = finalValue.slice(0, 14);
+  
+      // Set the input value
+      setVehicleRequest({
+        ...vehicleRequest,
+        registrationNumber: finalValue,
+      });
+  
+      // Validation for final format
+      const registrationNumberPattern = /^[A-Z]{2} \d{2} [A-Z]{2} \d{4}$/;
+      let error = '';
+  
+      if (finalValue.length === 14 && !registrationNumberPattern.test(finalValue)) {
+        error = 'Registration number must be in the format AA 12 BB 1234';
+      }
+  
+      setErrors({
+        ...errors,
+        registrationNumberError: error,
+      });
+    }
   };
+  
+  
+  
+  
+  
+  
+
+    
 
   const retrieveVehiclesByVariant = async () => {
     const response = await axios.get(
@@ -46,6 +122,7 @@ const ViewVehicles = () => {
 
   const saveVehicle = (e) => {
     e.preventDefault();
+
     if (vehicleRequest.registrationNumber === "") {
       toast.error("Vehicle Registration Missing!!!", {
         position: "top-center",
@@ -56,69 +133,24 @@ const ViewVehicles = () => {
         draggable: true,
         progress: undefined,
       });
-    } else {
-      fetch("http://localhost:8080/api/vehicle/add", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          //     Authorization: "Bearer " + admin_jwtToken,
-        },
-        body: JSON.stringify(vehicleRequest),
-      })
-        .then((result) => {
-          result.json().then((res) => {
-            if (res.success) {
-              toast.success(res.responseMessage, {
-                position: "top-center",
-                autoClose: 1000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-              });
-
-              setTimeout(() => {
-                window.location.reload(true);
-              }, 1000); // Redirect after 3 seconds
-            } else if (!res.success) {
-              toast.error(res.responseMessage, {
-                position: "top-center",
-                autoClose: 1000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-              });
-              setTimeout(() => {
-                window.location.reload(true);
-              }, 1000); // Redirect after 3 seconds
-            }
-          });
-        })
-        .catch((error) => {
-          console.error(error);
-          toast.error("It seems server is down", {
-            position: "top-center",
-            autoClose: 1000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-          setTimeout(() => {
-            window.location.reload(true);
-          }, 1000); // Redirect after 3 seconds
-        });
+      return;
     }
-  };
 
-  const deleteVehicle = (vehicleId, e) => {
-    fetch("http://localhost:8080/api/vehicle/delete?vehicleId=" + vehicleId, {
-      method: "DELETE",
+    if (errors.registrationNumberError) {
+      toast.error(errors.registrationNumberError, {
+        position: "top-center",
+        autoClose: 1000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      return;
+    }
+
+    fetch("http://localhost:8080/api/vehicle/add", {
+      method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -141,8 +173,8 @@ const ViewVehicles = () => {
 
             setTimeout(() => {
               window.location.reload(true);
-            }, 1000); // Redirect after 3 seconds
-          } else if (!res.success) {
+            }, 1000); // Redirect after 1 second
+          } else {
             toast.error(res.responseMessage, {
               position: "top-center",
               autoClose: 1000,
@@ -152,9 +184,6 @@ const ViewVehicles = () => {
               draggable: true,
               progress: undefined,
             });
-            setTimeout(() => {
-              window.location.reload(true);
-            }, 1000); // Redirect after 3 seconds
           }
         });
       })
@@ -169,17 +198,66 @@ const ViewVehicles = () => {
           draggable: true,
           progress: undefined,
         });
-        setTimeout(() => {
-          window.location.reload(true);
-        }, 1000); // Redirect after 3 seconds
+      });
+  };
+
+  const deleteVehicle = (vehicleId) => {
+    fetch("http://localhost:8080/api/vehicle/delete?vehicleId=" + vehicleId, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        //     Authorization: "Bearer " + admin_jwtToken,
+      },
+    })
+      .then((result) => {
+        result.json().then((res) => {
+          if (res.success) {
+            toast.success(res.responseMessage, {
+              position: "top-center",
+              autoClose: 1000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+
+            setTimeout(() => {
+              window.location.reload(true);
+            }, 1000); // Redirect after 1 second
+          } else {
+            toast.error(res.responseMessage, {
+              position: "top-center",
+              autoClose: 1000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+          }
+        });
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error("It seems server is down", {
+          position: "top-center",
+          autoClose: 1000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
       });
   };
 
   return (
     <div className="container-fluid">
-      <div class="row">
-        <div class="col-sm-4 mt-2">
-          <div class="card form-card custom-bg ">
+      <div className="row">
+        <div className="col-sm-4 mt-2">
+          <div className="card form-card custom-bg ">
             <img
               src={"http://localhost:8080/api/variant/" + variant.image}
               className="card-img-top rounded img-fluid"
@@ -187,8 +265,8 @@ const ViewVehicles = () => {
             />
           </div>
         </div>
-        <div class="col-sm-4 mt-2">
-          <div class="card form-card custom-bg shadow-lg">
+        <div className="col-sm-4 mt-2">
+          <div className="card form-card custom-bg shadow-lg">
             <div
               className="card-header bg-color custom-bg-text "
               style={{
@@ -196,11 +274,11 @@ const ViewVehicles = () => {
                 height: "50px",
               }}
             >
-              <h3 class="card-title ">{variant.name}</h3>
+              <h3 className="card-title">{variant.name}</h3>
             </div>
 
-            <div class="card-body text-left text-color">
-              <div class="text-left mt-3">
+            <div className="card-body text-left text-color">
+              <div className="text-left mt-3">
                 <h4>
                   Company :{" "}
                   <span className="header-logo-color">
@@ -222,7 +300,7 @@ const ViewVehicles = () => {
           </div>
         </div>
 
-        <div class="col-sm-4 mt-2">
+        <div className="col-sm-4 mt-2">
           <div className="form-card">
             <div className="container-fluid">
               <div
@@ -237,7 +315,7 @@ const ViewVehicles = () => {
               <div className="card-body mt-3">
                 <form className="text-color">
                   <div className="mb-3">
-                    <label for="name" class="form-label">
+                    <label htmlFor="registrationNumber" className="form-label">
                       <b>Registration Number</b>
                     </label>
                     <input
@@ -246,10 +324,16 @@ const ViewVehicles = () => {
                       id="registrationNumber"
                       name="registrationNumber"
                       placeholder="MH 12 BG 8055"
-                      onChange={handleUserInput}
+                      onChange={handleRegistrationInput}
                       value={vehicleRequest.registrationNumber}
                       required
                     />
+
+                    {errors.registrationNumberError && (
+                      <div className="text-danger mt-2">
+                        {errors.registrationNumberError}
+                      </div>
+                    )}
                   </div>
 
                   <div className="d-flex aligns-items-center justify-content-center mb-2">
@@ -266,7 +350,7 @@ const ViewVehicles = () => {
                       }}
                       onClick={saveVehicle}
                     >
-                      <b>  Add Vehicle</b>
+                      <b>Add Vehicle</b>
                     </button>
                     <ToastContainer />
                   </div>
@@ -290,7 +374,7 @@ const ViewVehicles = () => {
             height: "50px",
           }}
         >
-          <h2>All Variants</h2>
+          <h2>All Vehicles</h2>
         </div>
         <div
           className="card-body"
@@ -311,7 +395,7 @@ const ViewVehicles = () => {
               <tbody className="header-logo-color">
                 {vehicles.map((vehicle) => {
                   return (
-                    <tr>
+                    <tr key={vehicle.id}>
                       <td>
                         <b>{vehicle.id}</b>
                       </td>
@@ -321,7 +405,6 @@ const ViewVehicles = () => {
                       <td>
                         <b>{vehicle.status}</b>
                       </td>
-
                       <td>
                         <button
                           onClick={() => deleteVehicle(vehicle.id)}
