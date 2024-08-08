@@ -369,14 +369,25 @@ const AddVariantForm = () => {
                 </div>
 
                 <div className="col-12 mt-3" style={{ textAlign: 'center' }}>
-                  <button
-                    type="submit"
-                    className="btn custom-bg-text custom-bg"
-                    onClick={saveVariant}
-                  >
-                    Save Variant
-                  </button>
-                </div>
+  <button
+    type="submit"
+    className="btn custom-bg-text custom-bg"
+    onClick={saveVariant}
+    style={{
+      backgroundColor: 'green',
+      color: 'white',
+      border: 'none',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      transition: 'margin 0.3s',
+    }}
+    onMouseOver={(e) => (e.target.style.margin = '10px')}
+    onMouseOut={(e) => (e.target.style.margin = '0')}
+  >
+    Save Variant
+  </button>
+</div>
+
               </form>
             </div>
           </div>
