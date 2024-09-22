@@ -5,18 +5,43 @@ import { ToastContainer, toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal } from "react-bootstrap";
 
-const MyBooking = () => {
+const AllBookings = () => {
   const [bookings, setBookings] = useState([]);
-  const customer_jwtToken = sessionStorage.getItem("customer-jwtToken");
+  const admin_jwtToken = sessionStorage.getItem("admin-jwtToken");
 
-  const user = JSON.parse(sessionStorage.getItem("active-customer"));
+  const [booking, setBooking] = useState({});
+  const [vehicles, setVehicles] = useState([]);
+  const [vehicleId, setVehicleId] = useState("");
+  const [status, setStatus] = useState("");
+
+  const [variantId, setVariantId] = useState("");
+
+  const [assignBooking, setAssignBooking] = useState({});
+
+  const [showModal, setShowModal] = useState(false);
+
+  const handleClose = () => setShowModal(false);
+  const handleShow = () => setShowModal(true);
+
+  const assignBookingVehicle = (booking, e) => {
+    setAssignBooking(booking);
+    setVariantId(booking.variant.id);
+    handleShow();
+  };
 
   let navigate = useNavigate();
 
   const retrieveAllBookings = async () => {
     const response = await axios.get(
-      "http://localhost:8080/api/booking/fetch/customer-wise?customerId=" +
-        user.id
+      "http://localhost:8080/api/booking/fetch/all"
+    );
+    return response.data;
+  };
+
+  const retrieveVehiclesByVariant = async () => {
+    const response = await axios.get(
+      "http://localhost:8080/api/vehicle/fetch/variant-wise?variantId=" +
+        variantId
     );
     return response.data;
   };
@@ -29,8 +54,19 @@ const MyBooking = () => {
       }
     };
 
+    const getAllVariantVehicles = async () => {
+      const res = await retrieveVehiclesByVariant();
+      if (res) {
+        setVehicles(res.vehicles);
+      }
+    };
+
+    if (variantId !== "") {
+      getAllVariantVehicles();
+    }
+
     getAllBooking();
-  }, []);
+  }, [assignBooking]);
 
   const formatDateFromEpoch = (epochTime) => {
     const date = new Date(Number(epochTime));
@@ -39,9 +75,11 @@ const MyBooking = () => {
     return formattedDate;
   };
 
-  const cancelBooking = (e, bookingId) => {
-    console.log(bookingId);
-    if (!bookingId) {
+  const updateCustomerBookingStatus = (e) => {
+    console.log(assignBooking);
+    console.log(status);
+
+    if (assignBooking === null || status === "") {
       toast.error("Missing Input", {
         position: "top-right",
         autoClose: 2000,
@@ -51,14 +89,30 @@ const MyBooking = () => {
         draggable: true,
         progress: undefined,
       });
+    } else if (status === "Approved" && vehicleId === "") {
+      toast.error("Select Vehicle!!!", {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     } else {
-      let data = {
-        status: "Cancel",
-        bookingId: bookingId,
-      };
+      let data =
+        status === "Rejected"
+          ? { status: status, bookingId: assignBooking.id }
+          : {
+              status: status,
+              bookingId: assignBooking.id,
+              vehicleId: vehicleId,
+            };
 
-      fetch("http://localhost:8080/api/booking/cancel", {
-        method: "DELETE",
+      console.log(data);
+
+      fetch("http://localhost:8080/api/booking/update/assign/vehicle", {
+        method: "PUT",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -114,14 +168,11 @@ const MyBooking = () => {
           }, 1000); // Redirect after 3 seconds
         });
     }
+    e.preventDefault();
   };
 
   const viewCustomerBookingDetail = (booking) => {
     navigate("/customer/vehicle/booking/details", { state: booking });
-  };
-
-  const payAndConfirm = (booking) => {
-    navigate("/customer/booking/payment", { state: booking });
   };
 
   return (
@@ -226,30 +277,13 @@ const MyBooking = () => {
                       </td>
                       <td>
                         {(() => {
-                          if (booking.status === "Approved") {
+                          if (booking.status === "Pending") {
                             return (
                               <button
-                                onClick={() => payAndConfirm(booking)}
+                                onClick={() => assignBookingVehicle(booking)}
                                 className="btn btn-sm bg-color custom-bg-text"
                               >
-                                <b>Pay & Confirm</b>
-                              </button>
-                            );
-                          }
-                        })()}
-
-                        {(() => {
-                          if (
-                            booking.status !== "Paid & Confirmed" &&
-                            booking.status !== "Cancelled"
-                          ) {
-                            return (
-                              <button
-                                type="button"
-                                onClick={(e) => cancelBooking(e, booking.id)}
-                                className="btn btn-sm bg-color custom-bg-text mt-2"
-                              >
-                                <b>Cancel</b>
+                                <b>Update</b>
                               </button>
                             );
                           }
@@ -257,15 +291,7 @@ const MyBooking = () => {
 
                         <button
                           onClick={() => viewCustomerBookingDetail(booking)}
-                          className="btn btn-sm bg-color custom-bg-text mt-2"
-                          style={{
-                            backgroundColor: 'green',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 20px',
-                            cursor: 'pointer',
-                            transition: 'margin 0.3s',
-                          }} 
+                          className="btn btn-sm bg-color custom-bg-text"
                         >
                           <b>View</b>
                         </button>
@@ -278,8 +304,99 @@ const MyBooking = () => {
           </div>
         </div>
       </div>
+
+      <Modal show={showModal} onHide={handleClose}>
+        <Modal.Header closeButton className="bg-color custom-bg-text">
+          <Modal.Title
+            style={{
+              borderRadius: "1em",
+            }}
+          >
+            Update Booking Status
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="ms-3 mt-3 mb-3 me-3">
+            <form>
+              <div class="mb-3">
+                <label for="title" class="form-label">
+                  <b>Booking Id</b>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  value={assignBooking.bookingId}
+                  readOnly
+                />
+              </div>
+
+              <div className=" mb-3">
+                <label className="form-label">
+                  <b>Status</b>
+                </label>
+
+                <select
+                  name="status"
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">Select Status</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+
+              {(() => {
+                if (status === "Approved") {
+                  return (
+                    <div className=" mb-3">
+                      <label className="form-label">
+                        <b>Vehicle</b>
+                      </label>
+
+                      <select
+                        name="vehicleId"
+                        onChange={(e) => setVehicleId(e.target.value)}
+                        className="form-control"
+                      >
+                        <option value="">Select Vehicle</option>
+
+                        {vehicles.map((vehicle) => {
+                          return (
+                            <option value={vehicle.id}>
+                              {vehicle.registrationNumber}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  );
+                }
+              })()}
+
+              <div className="d-flex aligns-items-center justify-content-center mb-2">
+                <button
+                  type="submit"
+                  onClick={updateCustomerBookingStatus}
+                  class="btn bg-color custom-bg-text"
+                >
+                  Update Status
+                </button>
+                <ToastContainer />
+              </div>
+
+              <ToastContainer />
+            </form>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
-export default MyBooking;
+export default AllBookings;

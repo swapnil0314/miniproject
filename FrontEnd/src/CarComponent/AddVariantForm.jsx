@@ -59,9 +59,17 @@ const AddVariantForm = () => {
   const handleInput = (e) => {
     const { name, value } = e.target;
   
-    // Handle year-specific validation
-    if (name === "year") {
-      // Allow up to 4 digits
+    if (name === "name") {
+      // Ensure the first letter is capitalized
+      const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+      setVariantRequest({ ...variantRequest, [name]: capitalizedValue });
+  
+      if (value.charAt(0) !== value.charAt(0).toUpperCase()) {
+        setError("Variant Name must start with a capital letter");
+      } else {
+        setError(""); // Clear error if valid
+      }
+    } else if (name === "year") {
       const trimmedValue = value.slice(0, 4);
       setVariantRequest({ ...variantRequest, [name]: trimmedValue });
   
@@ -83,12 +91,10 @@ const AddVariantForm = () => {
   
 
   const handleModelNumberInput = (e) => {
-    // Allow only characters that match the model number format
     const value = e.target.value.toUpperCase(); // Convert to uppercase
     const regex = /^[0-9A-Z]*$/; // Allow digits and uppercase letters
 
     if (value === "" || regex.test(value)) {
-      // Check length constraints based on character position
       const len = value.length;
 
       if (
@@ -177,7 +183,7 @@ const AddVariantForm = () => {
           });
           setTimeout(() => {
             window.location.reload(true);
-          }, 2000); // Redirect after 2 seconds
+          }, 2000); // Reload after 2 seconds
         }
       })
       .catch((error) => {
@@ -247,6 +253,7 @@ const AddVariantForm = () => {
                     name="companyId"
                     onChange={handleInput}
                     className="form-control"
+                    value={variantRequest.companyId}
                   >
                     <option value="">Select Company</option>
 
@@ -279,54 +286,35 @@ const AddVariantForm = () => {
                     <b>Year</b>
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     className="form-control"
                     id="year"
                     name="year"
                     onChange={handleInput}
                     value={variantRequest.year}
-                    placeholder="Enter Year"
-                    maxLength="4" // Limit to 4 digits
+                    placeholder={`Enter a year between 1900 and ${currentYear}`}
                   />
-                  {error && <div className="text-danger mt-2">{error}</div>}
+                  {error && <small className="text-danger">{error}</small>}
                 </div>
 
-
                 <div className="col-md-6 mb-3">
-                  <label className="form-label">
+                  <label htmlFor="fuelType" className="form-label">
                     <b>Fuel Type</b>
                   </label>
-
                   <select
                     name="fuelType"
-                    onChange={handleInput}
                     className="form-control"
+                    onChange={handleInput}
+                    value={variantRequest.fuelType}
                   >
                     <option value="">Select Fuel Type</option>
-
-                    {fuelTypes.map((type) => {
+                    {fuelTypes.map((fuelType) => {
                       return (
-                        <option key={type} value={type}>
-                          {type}
+                        <option key={fuelType} value={fuelType}>
+                          {fuelType}
                         </option>
                       );
                     })}
-                  </select>
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">
-                    <b>Is AC</b>
-                  </label>
-
-                  <select
-                    name="isAC"
-                    onChange={handleInput}
-                    className="form-control"
-                  >
-                    <option value="">Select Is AC</option>
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
                   </select>
                 </div>
 
@@ -340,6 +328,7 @@ const AddVariantForm = () => {
                     name="seatingCapacity"
                     onChange={handleInput}
                     value={variantRequest.seatingCapacity}
+                    placeholder="Enter Seating Capacity"
                   />
                 </div>
 
@@ -353,41 +342,57 @@ const AddVariantForm = () => {
                     name="pricePerDay"
                     onChange={handleInput}
                     value={variantRequest.pricePerDay}
+                    placeholder="Enter Price Per Day"
                   />
                 </div>
 
                 <div className="col-md-6 mb-3">
                   <label className="form-label">
-                    <b>Image</b>
+                    <b>AC Available?</b>
+                  </label>
+                  <select
+                    name="isAC"
+                    onChange={handleInput}
+                    className="form-control"
+                    value={variantRequest.isAC}
+                  >
+                    <option value={true}>Yes</option>
+                    <option value={false}>No</option>
+                  </select>
+                </div>
+
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">
+                    <b>Select Image</b>
                   </label>
                   <input
                     type="file"
                     className="form-control"
                     name="image"
-                    onChange={(e) => setSelectImage(e.target.files[0])}
+                    onChange={(e) => {
+                      setSelectImage(e.target.files[0]);
+                    }}
                   />
                 </div>
 
-                <div className="col-12 mt-3" style={{ textAlign: 'center' }}>
-                <button
-                  type="submit"
-                  className="btn custom-bg-text custom-bg"
-                  onClick={saveVariant}
-                  style={{
-                    backgroundColor: 'green',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    cursor: 'pointer',
-                    transition: 'margin 0.3s',
-                  }}
-                  onMouseOver={(e) => (e.target.style.margin = '10px')}
-                  onMouseOut={(e) => (e.target.style.margin = '0')}
-                >
-                  Save Variant
-                </button>
-              </div>
-
+                <div className="col-12 text-center ">
+                  <button
+                    className="btn custom-bg text-color"
+                    style={{
+                      backgroundColor: "#28a745", // Success green color
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "5px",
+                      padding: "10px 20px",
+                      fontSize: "16px",
+                    }}
+                    type="submit"
+                    onClick={saveVariant}
+                    disabled={error} // Disable the button if there's an error
+                  >
+                    Add Variant
+                  </button>
+                </div>
               </form>
             </div>
           </div>
